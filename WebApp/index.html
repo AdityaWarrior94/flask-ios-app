@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Attendance Form</title>
+</head>
+<body>
+    <h1>Attendance Form</h1>
+    <form id="attendance-form">
+        <label for="date">Date:</label>
+        <input type="text" id="date" name="date" readonly><br><br>
+
+        <label for="time">Time:</label>
+        <input type="text" id="time" name="time" readonly><br><br>
+
+        <label for="branch">Branch:</label>
+        <select id="branch" name="branch">
+            <option value="Select">Select</option>
+            <!-- Options populated dynamically -->
+        </select><br><br>
+
+        <!-- Other fields... -->
+
+        <div id="students">
+            <h3>Students</h3>
+            <!-- Student fields populated dynamically -->
+        </div>
+
+        <button type="submit">Submit</button>
+    </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            document.getElementById('date').value = now.toISOString().split('T')[0];
+            document.getElementById('time').value = now.toTimeString().split(' ')[0];
+
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    // Populate fields with data
+                    const branchSelect = document.getElementById('branch');
+                    data.branches.forEach(branch => {
+                        const option = document.createElement('option');
+                        option.value = branch;
+                        option.textContent = branch;
+                        branchSelect.appendChild(option);
+                    });
+
+                    // Populate students
+                    const studentsDiv = document.getElementById('students');
+                    data.students.forEach(student => {
+                        const studentDiv = document.createElement('div');
+                        studentDiv.innerHTML = `
+                            <label>${student}</label>
+                            <select name="present">
+                                <option value="Present">Present</option>
+                                <option value="Absent">Absent</option>
+                            </select>
+                            <input type="text" name="quiz_marks">
+                            <input type="text" name="assignment_grades">
+                        `;
+                        studentsDiv.appendChild(studentDiv);
+                    });
+                });
+
+            document.getElementById('attendance-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                const formData = {
+                    Date: document.getElementById('date').value,
+                    Time: document.getElementById('time').value,
+                    Branch: document.getElementById('branch').value,
+                    // Other fields...
+                    Students: []
+                };
+
+                document.querySelectorAll('#students > div').forEach(studentDiv => {
+                    const student = {
+                        'Student Name': studentDiv.querySelector('label').textContent,
+                        'Present': studentDiv.querySelector('select[name="present"]').value,
+                        'Quiz Marks': studentDiv.querySelector('input[name="quiz_marks"]').value,
+                        'Assignment Grades': studentDiv.querySelector('input[name="assignment_grades"]').value
+                    };
+                    formData.Students.push(student);
+                });
+
+                fetch('/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
