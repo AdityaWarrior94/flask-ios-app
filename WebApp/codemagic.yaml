@@ -1,0 +1,38 @@
+workflows:
+  ios:
+    name: iOS Workflow
+    environment:
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set up Python environment
+        script: |
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install kivy
+          pip install kivy-ios
+          pip install -r requirements.txt
+      - name: Build the Kivy iOS project
+        script: |
+          git clone https://github.com/kivy/kivy-ios
+          cd kivy-ios
+          ./toolchain.py build kivy
+          ./toolchain.py create myapp ../
+          cd myapp-ios
+          xcodebuild -workspace myapp.xcworkspace \
+                     -scheme myapp \
+                     -sdk iphoneos \
+                     -configuration Release \
+                     archive -archivePath $HOME/ios/myapp.xcarchive
+      - name: Export IPA
+        script: |
+          xcodebuild -exportArchive \
+                     -archivePath $HOME/ios/myapp.xcarchive \
+                     -exportOptionsPlist ExportOptions.plist \
+                     -exportPath $HOME/ios/myapp.ipa
+    artifacts:
+      - $HOME/ios/myapp.ipa
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
